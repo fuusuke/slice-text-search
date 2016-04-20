@@ -33,7 +33,7 @@ public class IndexerTest {
 	}
 
 	@Test
-	public void putAndQueryAndDeleteFileName() throws Exception {
+	public void putQueryAndDeleteFileName() throws Exception {
 		String fileName = "file_name_1";
 		Indexer indexer = new Indexer();
 		elasticSearch.reset().withIndex(ElasticSearch.FILE_INDEX)
@@ -58,7 +58,7 @@ public class IndexerTest {
 	}
 
 	@Test
-	public void putAndQueryAndDeleteWord() throws Exception {
+	public void putQueryAndDeleteWord() throws Exception {
 		Indexer indexer = new Indexer();
 		WordDetails wordDetails = new WordDetails(null, 1, "word_1");
 

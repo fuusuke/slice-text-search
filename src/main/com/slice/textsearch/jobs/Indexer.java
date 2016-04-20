@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.Properties;
 import java.util.Scanner;
 
@@ -18,6 +20,32 @@ import com.slice.textsearch.utils.ElasticSearch;
 import com.slice.textsearch.utils.ElasticSearchResposeParser;
 import com.slice.textsearch.utils.WordDetails;
 
+/***
+ * Job to index every word in a file. This index is to provide ready to serve
+ * value: number of times the work occurs. It is a batch process, that goes
+ * through all the files, the first run would be long, the following ones can be
+ * optimized as follows:
+ * <ul>
+ * <li>Check for files added after the last index run</li>
+ * <li>Check for files modified after the last index run</li>
+ * <li>Ignore stop-words for indexing</li>
+ * </ul>
+ * 
+ * Currently it is possible to get duplicate content with different file names,
+ * but better of doing this would be to isolate cases where the duplication is
+ * handled maturely and restrict it from indexing.
+ * 
+ * <ul>
+ * <li>Iterate through all the files For each file</li>
+ * <li>iterate through all the words and also index the file as "done" for each
+ * word</li>
+ * <li>Index every word with count and index every word with position and
+ * filename</li>
+ * </ul>
+ * 
+ * @author fuusuke
+ * 
+ */
 public class Indexer implements Job {
 
 	private ElasticSearch elasticSearch = null;
@@ -29,49 +57,45 @@ public class Indexer implements Job {
 
 	@Override
 	public void execute(JobExecutionContext arg0) throws JobExecutionException {
-		/*
-		 * Currently it is possible to get duplicate content with different file
-		 * names, but better of doing this would be to isolate cases where the
-		 * duplication is handled maturely and restrict it from indexing
-		 */
 		elasticSearch = new ElasticSearch();
 		String pathToFileDirectory = getPathToFileDirectory();
-		File[] listOfFileObjects = getListOfFileNames(pathToFileDirectory);
+		File[] listOfFileObjects = getListOfFile(pathToFileDirectory);
 
-		/*
-		 * Iterate through all the files For each file, iterate through all the
-		 * words and also index the file as "done" For each word, index every
-		 * word with count and index every word with position and filename
-		 */
 		for (File file : listOfFileObjects) {
 			try {
-				System.out.printf(">>>>>>>>>>> Indexing %s started",
-						file.getName());
+				// TODO: Memo should be class for storing all actionable
+				// attributes.
+				System.out.println(new Date() + " - Started indexing "
+						+ file.getName());
+				System.out.println();
 				String indexMemo = indexFile(file);
-				System.out.printf("Indexing %s completed <<<<<<<<<<<<",
-						file.getName());
-			} catch (FileNotFoundException e) {
-				e.printStackTrace();
+				// System.out.println(indexMemo);
+				System.out.println(new Date() + " - Completed indexing "
+						+ file.getName());
+			} catch (FileNotFoundException | InterruptedException e) {
 				String indexMemo = String.format(
 						"Could not create index for file: %s", file.getName());
+				System.out.println(indexMemo);
 			}
 		}
 	}
 
-	private String indexFile(File file) throws FileNotFoundException {
+	private String indexFile(File file) throws FileNotFoundException,
+			InterruptedException {
 		// Check if file is already indexed
-		String fileName = file.getName();
-		String indexMemo = existingIndex(fileName);
+		String indexMemo = existingIndex(file.getName());
 		if (indexMemo != null) {
 			return indexMemo;
 		} else {
 			elasticSearch.reset().withIndex(ElasticSearch.FILE_INDEX)
 					.withIndexType(ElasticSearch.FILE_INDEX_TYPE);
-			String information = createFileNameInformationForPost(fileName);
+			String information = createFileNameInformationForPost(file
+					.getName());
 			String response = elasticSearch.postIt(information);
 			if (!ElasticSearchResposeParser
 					.isPostItResponseSuccessful(response)) {
-				indexMemo = String.format("Could not index file: %s", fileName);
+				indexMemo = String.format("Could not index file: %s",
+						file.getName());
 				return indexMemo;
 			}
 		}
@@ -79,9 +103,14 @@ public class Indexer implements Job {
 		StringBuilder wordIndexMemo = new StringBuilder();
 		while (fileScanner.hasNext()) {
 			String word = fileScanner.next();
-			System.out.printf(">>>>>>>>>>> Indexing %s started", word);
-			indexMemo = indexWord(word, ElasticSearch.WORD_INDEX_TYPE);
-			System.out.printf("Indexing %s completed <<<<<<<<<<<", word);
+			word = word.replaceAll("[^a-zA-Z0-9]", "");
+			Thread.sleep(100);
+			if (Arrays.asList(WordDetails.stopwords).contains(
+					word.toLowerCase())) {
+				continue;
+			}
+			indexMemo = indexWord(word.toLowerCase(),
+					ElasticSearch.WORD_INDEX_TYPE);
 			wordIndexMemo.append(indexMemo);
 			wordIndexMemo.append(WORD_INDEX_MEMO_DELIMITER);
 		}
@@ -99,9 +128,9 @@ public class Indexer implements Job {
 	 * @return
 	 */
 	public String existingIndex(String fileName) {
-		String query = String.format(
+		String query = new String(String.format(
 				"{\"query\": {\"query_string\": {\"query\": \"%s\"}}}",
-				fileName);
+				fileName));
 		String response = elasticSearch.reset()
 				.withIndexType(ElasticSearch.FILE_INDEX)
 				.withIndex(ElasticSearch.FILE_INDEX_TYPE).withSearch()
@@ -113,7 +142,8 @@ public class Indexer implements Job {
 	}
 
 	public String createFileNameInformationForPost(String fileName) {
-		String information = String.format("{\"file_name\": \"%s\"}", fileName);
+		String information = new String(String.format(
+				"{\"file_name\": \"%s\"}", fileName));
 		return information;
 	}
 
@@ -137,12 +167,13 @@ public class Indexer implements Job {
 			response = elasticSearch.putIt(information);
 
 			if (ElasticSearchResposeParser.isWordCountUpdated(response)) {
-				return String.format("Word Count updated, word: %s, count: %d",
+				return String.format(
+						"Word Count updated, word: \'%s\', frequency: %d",
 						wordDetails.word, wordDetails.wordCount);
 			} else {
-				return String.format(
-						"Could not upadate Word Count, word: %s, count: %d",
-						wordDetails.word, wordDetails.wordCount);
+				return String
+						.format("Could not upadate Word Count, word: \'%s\', frequency: %d",
+								wordDetails.word, wordDetails.wordCount);
 			}
 		} else {
 			// New word
@@ -161,18 +192,19 @@ public class Indexer implements Job {
 				indexType);
 		response = elasticSearch.postIt(information);
 		if (ElasticSearchResposeParser.hasIndex(response)) {
-			return String.format("Word indexed, word: %s, count: %d",
+			return String.format("Word indexed, word: '%s', frequency: %d",
 					wordDetails.word, wordDetails.wordCount);
 		} else {
-			return String.format("Could not index word, word: %s, count: %d",
+			return String.format(
+					"Could not index word, word: '%s', frequency: %d",
 					wordDetails.word, wordDetails.wordCount);
 		}
 	}
 
 	public String existingWordIndex(String word, String indexType) {
 		elasticSearch.reset();
-		String query = String.format(
-				"{\"query\": {\"query_string\": {\"query\": \"%s\"}}}", word);
+		String query = new String(String.format(
+				"{\"query\": {\"query_string\": {\"query\": \"%s\"}}}", word));
 		elasticSearch.withIndexType(ElasticSearch.WORD_INDEX)
 				.withIndexType(indexType).withSearch();
 
@@ -180,13 +212,13 @@ public class Indexer implements Job {
 	}
 
 	public String createWordInformationForPost(WordDetails wordDetails) {
-		String information = String.format(
+		String information = new String(String.format(
 				"{\"word\": \"%s\", \"count\": \"%d\"}", wordDetails.word,
-				wordDetails.wordCount);
+				wordDetails.wordCount));
 		return information;
 	}
 
-	private File[] getListOfFileNames(String pathToFileDirectory) {
+	private File[] getListOfFile(String pathToFileDirectory) {
 		File directory = new File(pathToFileDirectory);
 		if (directory.isDirectory()) {
 			return directory.listFiles();
@@ -222,7 +254,6 @@ public class Indexer implements Job {
 				elasticSearch.reset();
 				elasticSearch.withIndex(index).withIndexType(indexType)
 						.withId(idToDelete);
-				System.out.println(elasticSearch.deleteIt());
 			}
 		} catch (JSONException e) {
 			e.printStackTrace();

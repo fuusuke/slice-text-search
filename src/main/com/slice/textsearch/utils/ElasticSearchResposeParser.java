@@ -40,8 +40,6 @@ public class ElasticSearchResposeParser {
 
 	public static WordDetails getWordDetails(String response) {
 		boolean isSucessful = ElasticSearchResposeParser.hasIndex(response);
-		System.out.println(isSucessful);
-		System.out.println(response);
 		if (isSucessful) {
 			try {
 				int wordCount = 0;
@@ -75,8 +73,6 @@ public class ElasticSearchResposeParser {
 	 * @return
 	 */
 	public static boolean isWordCountUpdated(String response) {
-		System.out.println("isWordCountUpdated");
-		System.out.println(response);
 		JSONObject obj = ElasticSearchResposeParser
 				.parseElasticSearchResponse(response);
 		if (obj != null) {

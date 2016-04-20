@@ -1,6 +1,5 @@
 package com.slice.textsearch;
 
-import static org.quartz.CronScheduleBuilder.cronSchedule;
 import static org.quartz.JobBuilder.newJob;
 import static org.quartz.TriggerBuilder.newTrigger;
 
@@ -14,11 +13,12 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
-import org.quartz.CronTrigger;
 import org.quartz.JobDetail;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 import org.quartz.SchedulerFactory;
+import org.quartz.SimpleScheduleBuilder;
+import org.quartz.Trigger;
 import org.quartz.impl.StdSchedulerFactory;
 
 import com.slice.textsearch.jobs.Indexer;
@@ -26,6 +26,13 @@ import com.slice.textsearch.utils.ElasticSearch;
 import com.slice.textsearch.utils.ElasticSearchResposeParser;
 import com.slice.textsearch.utils.WordDetails;
 
+/***
+ * End point to see the usage and to trigger the indexer. TODO: Trigger the
+ * indexer with server start
+ * 
+ * @author fuusuke
+ * 
+ */
 @Path("/search")
 public class TextSearch {
 	@GET
@@ -45,10 +52,11 @@ public class TextSearch {
 
 				JobDetail job = newJob(Indexer.class).withIdentity("indexer",
 						"slice-group").build();
-				CronTrigger trigger = newTrigger()
+				Trigger trigger = newTrigger()
 						.withIdentity("indexer-trigger", "slice-group")
-						.withSchedule(cronSchedule("0 0/1 * 1/1 * ? *"))
-						.build();
+						.withSchedule(
+								SimpleScheduleBuilder.simpleSchedule()
+										.withIntervalInSeconds(5)).build();
 				sche.scheduleJob(job, trigger);
 				sche.start();
 				return properties.getProperty("textfile.location");
@@ -60,6 +68,12 @@ public class TextSearch {
 		return "usage: please use the service as http://localhost/slice-text-search/rest/search/{wordToSearch}";
 	}
 
+	/***
+	 * "usage: please use the service as http://localhost/slice-text-search/rest/search/{wordToSearch}"
+	 * 
+	 * @param word
+	 * @return
+	 */
 	@Path("{word}")
 	@GET
 	public String searchWord(@PathParam("word") String word) {
@@ -71,11 +85,8 @@ public class TextSearch {
 		WordDetails wordDetails = ElasticSearchResposeParser
 				.getWordDetails(response);
 		String wordSearchCountMemo = indexWordSearchCount(word, elasticSearch);
-		return ((wordDetails != null ? (String.format(
-				"The word `%s` was found to occur %d times", wordDetails.word,
-				wordDetails.wordCount)) : (String.format(
-				"The word '%s' was not found.", word)))
-				+ " <=> " + wordSearchCountMemo);
+		return WordDetails.createResponseText(wordDetails, wordSearchCountMemo,
+				word);
 	}
 
 	private String indexWordSearchCount(String word, ElasticSearch elasticSearch) {

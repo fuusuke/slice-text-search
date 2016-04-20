@@ -68,13 +68,13 @@ public class ElasticSearch {
 					output.write(query.getBytes(charset));
 				}
 			}
-
+			Thread.sleep(10);
 			InputStream response = connection.getInputStream();
 			Scanner responseScanner = new Scanner(response);
 			while (responseScanner.hasNext()) {
 				responseBuilder.append(responseScanner.next());
 			}
-		} catch (IOException e) {
+		} catch (IOException | InterruptedException e) {
 			e.printStackTrace();
 		}
 		return responseBuilder.toString();
