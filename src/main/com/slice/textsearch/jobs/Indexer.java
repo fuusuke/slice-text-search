@@ -9,6 +9,7 @@ import java.util.Date;
 import java.util.Properties;
 import java.util.Scanner;
 
+import org.apache.commons.io.FilenameUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -68,6 +69,8 @@ public class Indexer implements Job {
 				System.out.println(new Date() + " - Started indexing "
 						+ file.getName());
 				System.out.println();
+				// TODO: Improve this by creating each file index as a separate
+				// task.
 				String indexMemo = indexFile(file);
 				// System.out.println(indexMemo);
 				System.out.println(new Date() + " - Completed indexing "
@@ -83,19 +86,18 @@ public class Indexer implements Job {
 	private String indexFile(File file) throws FileNotFoundException,
 			InterruptedException {
 		// Check if file is already indexed
-		String indexMemo = existingIndex(file.getName());
+		String fileName = FilenameUtils.removeExtension(file.getName());
+		String indexMemo = existingIndex(fileName);
 		if (indexMemo != null) {
 			return indexMemo;
 		} else {
 			elasticSearch.reset().withIndex(ElasticSearch.FILE_INDEX)
 					.withIndexType(ElasticSearch.FILE_INDEX_TYPE);
-			String information = createFileNameInformationForPost(file
-					.getName());
-			String response = elasticSearch.postIt(information);
+			String information = createFileNameInformationForPost(fileName);
+			String response = new String(elasticSearch.postIt(information));
 			if (!ElasticSearchResposeParser
 					.isPostItResponseSuccessful(response)) {
-				indexMemo = String.format("Could not index file: %s",
-						file.getName());
+				indexMemo = String.format("Could not index file: %s", fileName);
 				return indexMemo;
 			}
 		}
@@ -131,10 +133,10 @@ public class Indexer implements Job {
 		String query = new String(String.format(
 				"{\"query\": {\"query_string\": {\"query\": \"%s\"}}}",
 				fileName));
-		String response = elasticSearch.reset()
+		String response = new String(elasticSearch.reset()
 				.withIndexType(ElasticSearch.FILE_INDEX)
 				.withIndex(ElasticSearch.FILE_INDEX_TYPE).withSearch()
-				.postIt(query);
+				.postIt(query));
 		if (ElasticSearchResposeParser.hasIndex(response)) {
 			return String.format("File: %s is already indexed", fileName);
 		}
@@ -152,7 +154,7 @@ public class Indexer implements Job {
 		 * Check for existing index for the word. If index is found, get the
 		 * count and add 1.
 		 */
-		String response = existingWordIndex(word, indexType);
+		String response = new String(existingWordIndex(word, indexType));
 
 		WordDetails wordDetails = ElasticSearchResposeParser
 				.getWordDetails(response);
@@ -164,7 +166,7 @@ public class Indexer implements Job {
 			elasticSearch.reset();
 			elasticSearch.withIndexType(ElasticSearch.WORD_INDEX)
 					.withIndexType(indexType).withId(wordDetails.id);
-			response = elasticSearch.putIt(information);
+			response = new String(elasticSearch.putIt(information));
 
 			if (ElasticSearchResposeParser.isWordCountUpdated(response)) {
 				return String.format(
@@ -183,14 +185,13 @@ public class Indexer implements Job {
 	}
 
 	public String indexNewWord(String word, String indexType) {
-		String response = null;
 		WordDetails wordDetails = new WordDetails(null, 1, word);
 		String information = createWordInformationForPost(wordDetails);
 
 		elasticSearch.reset();
 		elasticSearch.withIndexType(ElasticSearch.WORD_INDEX).withIndexType(
 				indexType);
-		response = elasticSearch.postIt(information);
+		String response = new String(elasticSearch.postIt(information));
 		if (ElasticSearchResposeParser.hasIndex(response)) {
 			return String.format("Word indexed, word: '%s', frequency: %d",
 					wordDetails.word, wordDetails.wordCount);
