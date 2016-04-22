@@ -57,7 +57,7 @@ public class TextSearchCLI {
 		long startTimestamp = System.currentTimeMillis();
 		for (Path path : filePaths) {
 			final byte[] searchByte = word.getBytes(StandardCharsets.UTF_8);
-			int linecount = 0;
+			int lineCount = 0;
 			boolean inMiddleOfAWord = false;
 			boolean continueToEOL = false;
 			try {
@@ -82,16 +82,18 @@ public class TextSearchCLI {
 							if (currentCharacter == '\n') {
 								continueToEOL = false;
 								inMiddleOfAWord = false;
-								linecount++;
+								lineCount++;
 							}
 						} else if (currentCharacter == '\n') {
-							linecount++;
+							lineCount++;
 							inMiddleOfAWord = false;
 						} else if (currentCharacter == ' ') {
 							inMiddleOfAWord = false;
 						} else if (!inMiddleOfAWord) {
 							if (check(buffer, i, searchByte)) {
-								System.out.println(wordCount.incrementAndGet()
+								System.out.println("Occurrence #"
+										+ wordCount.incrementAndGet()
+										+ " at line #" + (lineCount + 1)
 										+ " in " + path.toString());
 								i += searchByte.length - 1;
 								continueToEOL = true;
@@ -136,7 +138,7 @@ public class TextSearchCLI {
 		}
 	}
 
-	private static final int READ_SIZE = 1024;
+	private static final int READ_SIZE = 4096;
 
 	private boolean check(MappedByteBuffer buffer, int index, byte[] searchByte) {
 		for (int i = 0; i < searchByte.length; i++) {

@@ -15,10 +15,10 @@ public class TextSearchCLITest {
 	@Test
 	public void createData() throws IOException {
 		File file = new File("test.txt");
-		cli = new TextSearchCLI(file.getAbsolutePath(), "Louisville");
+		cli = new TextSearchCLI(file.getAbsolutePath(), "26");
 		cli.createFileList();
 		cli.triggerSearch();
-		assertEquals(cli.wordCount.get(), 0L);
+		assertEquals(cli.wordCount.get(), 15L);
 	}
 
 }
