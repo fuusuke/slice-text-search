@@ -20,6 +20,7 @@ import org.quartz.JobExecutionException;
 import com.slice.textsearch.utils.ElasticSearch;
 import com.slice.textsearch.utils.ElasticSearchResposeParser;
 import com.slice.textsearch.utils.WordDetails;
+import com.slice.textsearch.utils.WordSearchResponse;
 
 /***
  * Job to index every word in a file. This index is to provide ready to serve
@@ -193,12 +194,13 @@ public class Indexer implements Job {
 				indexType);
 		String response = new String(elasticSearch.postIt(information));
 		if (ElasticSearchResposeParser.hasIndex(response)) {
-			return String.format("Word indexed, word: '%s', frequency: %d",
-					wordDetails.word, wordDetails.wordCount);
+			return WordSearchResponse
+					.createSuccessWordSearchResponseMap(wordDetails.word,
+							String.valueOf(wordDetails.wordCount), "");
 		} else {
-			return String.format(
-					"Could not index word, word: '%s', frequency: %d",
-					wordDetails.word, wordDetails.wordCount);
+			return WordSearchResponse
+					.createFailureWordSearchResponseMap(wordDetails.word,
+							String.valueOf(wordDetails.wordCount), "");
 		}
 	}
 

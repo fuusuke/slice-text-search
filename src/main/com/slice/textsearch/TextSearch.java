@@ -33,7 +33,7 @@ import com.slice.textsearch.utils.WordDetails;
  * @author fuusuke
  * 
  */
-@Path("/search")
+@Path("/searcher")
 public class TextSearch {
 	@GET
 	@Produces(MediaType.TEXT_PLAIN)
@@ -93,4 +93,5 @@ public class TextSearch {
 		Indexer indexer = new Indexer();
 		return indexer.indexWord(word, ElasticSearch.WORD_SEARCH_INDEX_TYPE);
 	}
+
 }

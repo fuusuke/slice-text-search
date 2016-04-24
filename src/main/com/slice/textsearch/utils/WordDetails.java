@@ -22,11 +22,8 @@ public class WordDetails {
 
 	public static String createResponseText(WordDetails wordDetails,
 			String wordSearchCountMemo, String word) {
-		return ((wordDetails != null ? (String.format(
-				"The word `%s` was found %d number of times", wordDetails.word,
-				wordDetails.wordCount)) : (String.format(
-				"The word '%s' was not found.", word)))
-				+ " <=> " + wordSearchCountMemo);
+		return WordSearchResponse.createSearchResponse(wordDetails,
+				wordSearchCountMemo);
 	}
 
 	public static String[] stopwords = { "a", "as", "able", "about", "above",

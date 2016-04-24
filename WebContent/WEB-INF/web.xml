@@ -19,26 +19,15 @@
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>Slice API</servlet-name>
-		<url-pattern>/rest/*</url-pattern>
+		<url-pattern>/v1/*</url-pattern>
 	</servlet-mapping>
 	<context-param>
-		<param-name>quartz:config-file</param-name>
-		<param-value>quartz.properties</param-value>
-	</context-param>
-	<context-param>
-		<param-name>quartz:shutdown-on-unload</param-name>
-		<param-value>true</param-value>
-	</context-param>
-	<context-param>
-		<param-name>quartz:wait-on-shutdown</param-name>
-		<param-value>true</param-value>
-	</context-param>
-	<context-param>
-		<param-name>quartz:start-on-load</param-name>
-		<param-value>true</param-value>
+		<param-name>null.error.provider</param-name>
+		<param-value>com.slice.textsearch.errors.NullPointerExceptionMapper</param-value>
 	</context-param>
 
-	<listener>
-		<listener-class>org.quartz.ee.servlet.QuartzInitializerListener</listener-class>
-	</listener>
+	<error-page>
+		<error-code>404</error-code>
+		<location>/WEB-INF/jsp/errorpages/404.jsp</location>
+	</error-page>
 </web-app>
