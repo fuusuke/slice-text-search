@@ -23,7 +23,7 @@ public class WordDetails {
 	public static String createResponseText(WordDetails wordDetails,
 			String wordSearchCountMemo, String word) {
 		return WordSearchResponse.createSearchResponse(wordDetails,
-				wordSearchCountMemo);
+				wordSearchCountMemo, word);
 	}
 
 	public static String[] stopwords = { "a", "as", "able", "about", "above",

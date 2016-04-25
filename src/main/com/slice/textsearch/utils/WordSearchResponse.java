@@ -40,14 +40,14 @@ public class WordSearchResponse {
 	}
 
 	public static String createSearchResponse(WordDetails wordDetails,
-			String wordSearchCountMemo) {
+			String wordSearchCountMemo, String word) {
 		Map<String, String> values = new HashMap<>();
 		if (wordDetails != null) {
-			values.put("word", wordDetails.word);
+			values.put("word", word);
 			values.put("count", String.valueOf(wordDetails.wordCount));
 		} else {
-			values.put("word", "");
-			values.put("count", "");
+			values.put("word", word);
+			values.put("count", "0");
 		}
 		values.put("memo", wordSearchCountMemo);
 		return createWordResponse(values);
